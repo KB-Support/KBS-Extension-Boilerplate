@@ -3,8 +3,8 @@
  * Use this extension boiler plate to follow best practices and standards
  * when developing extensions for the KB Support plugin.
  *
- * @Author	Mike Howard
- * @Updated	2nd December 2016
+ * @Author	{Mike Howard}
+ * @Updated	{2nd December 2016}
  *
  * Replace all instances of 'Plugin_Name' with your plugin name
  * Replace all instances of 'PLUGIN_NAME' with your plugin name in uppercase
@@ -30,6 +30,26 @@
 if ( ! defined( 'ABSPATH' ) )
 	exit;
 
+if ( ! defined( 'KBS_PLUGIN_NAME_VERSION' ) )	{
+	define( 'KBS_PLUGIN_NAME_VERSION', '1.0' );
+}
+
+if ( ! defined( 'KBS_PLUGIN_NAME_DIR' ) )	{
+	define( 'KBS_PLUGIN_NAME_DIR', untrailingslashit( dirname( __FILE__ ) ) );
+}
+
+if ( ! defined( 'KBS_PLUGIN_NAME_BASENAME' ) )	{
+	define( 'KBS_PLUGIN_NAME_BASENAME', plugin_basename( __FILE__ ) );
+}
+
+if ( ! defined( 'KBS_PLUGIN_NAME_URL' ) )	{
+	define( 'KBS_PLUGIN_NAME_URL', untrailingslashit( plugins_url( '', __FILE__ ) ) );
+}
+
+if ( ! defined( 'KBS_PLUGIN_NAME_NAME' ) )	{
+	define( 'KBS_PLUGIN_NAME_NAME', 'Email Support' );
+}
+
 if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
 
 	class KBS_Plugin_Name	{
@@ -43,7 +63,7 @@ if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
          * @var		int		$required_kbs	The minimum required KB Support version
          * @since	1.0
          */
-		private static $required_kbs = '0.9'; // Enter the minimum required KBS version
+		private static $required_kbs = '1.2'; // Enter the minimum required KBS version
 
 		/**
          * Get active instance
@@ -61,7 +81,6 @@ if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
 
 			if ( ! self::$instance )	{
 				self::$instance = new KBS_Plugin_Name();
-				self::$instance->define_constants();
                 self::$instance->includes();
                 self::$instance->load_textdomain();
                 self::$instance->hooks();
@@ -71,22 +90,18 @@ if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
 		} // __construct
 
 		/**
-		 * Define our constants
-		 * @since	1.0
-		 */
-		public static function define_constants()	{
-			define( 'KBS_PLUGIN_NAME_DIR', untrailingslashit( dirname( __FILE__ ) ) );
-			define( 'KBS_PLUGIN_NAME_BASENAME', plugin_basename( __FILE__ ) );
-			define( 'KBS_PLUGIN_NAME_URL', untrailingslashit( plugins_url( '', __FILE__ ) ) );
-			define( 'KBS_PLUGIN_NAME_NAME', 'Plugin_Name' );
-		} // define_constants
-
-		/**
 		 * Calls the files that are required
 		 * @since	1.0
 		 */
 		public static function includes()	{	
 			require_once KBS_PLUGIN_NAME_DIR . '/includes/plugin-name-functions.php';
+
+			if ( is_admin() ) {
+				if ( class_exists( 'KBS_License' ) ) {
+					$kbs_kb_license = new KBS_License( __FILE__, KBS_PLUGIN_NAME_NAME, KBS_PLUGIN_NAME_VERSION, '{Author Name}' );
+				}
+				require_once KBS_PLUGIN_NAME_DIR . '/includes/admin/upgrades/upgrade-functions.php';
+			}
 		} // includes
 
 		/**
@@ -98,12 +113,6 @@ if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
 			add_filter( 'kbs_settings_sections_extensions',        array( self::$instance, 'settings_section' ) );
 			add_filter( 'kbs_settings_extensions',                 array( self::$instance, 'settings' ) );
 			add_filter( 'kbs_settings_extensions_contextual_help', array( self::$instance, 'contextual_help' ) );
-
-			// If your plugin requires a license, don't forget this!
-			// If no license is required, you can remove
-			if ( class_exists( 'KBS_License' ) ) {
-                $license = new KBS_License( __FILE__, KBS_PLUGIN_NAME_NAME, KBS_PLUGIN_NAME_VERSION, '{Author Name}' );
-            }
 
 		} // hooks
 
@@ -215,7 +224,7 @@ if ( ! class_exists( 'KBS_Plugin_Name' ) )	{
 			$contextual_help .=
 				'<p>' . __( '<strong>{Plugin Name} Settings</strong>', 'kbs-plugin-name' ) . '</p>' .
 				'<ul>' .
-					'<li>' . __( '<strong>{Setting Name}</strong> - {Setting Description}', 'kb-support' ) .
+					'<li>' . __( '<strong>{Setting Name}</strong> - {Setting Description}', 'kbs-plugin-name' ) .
 				'</ul>';
 
 			return $contextual_help;
@@ -230,3 +239,45 @@ function KBS_Plugin_Name_Load()	{
 	return KBS_Plugin_Name::instance();
 } // KBS_Plugin_Name_Load
 add_action( 'plugins_loaded', 'KBS_Plugin_Name_Load' );
+
+/**
+ * Runs when the plugin is activated.
+ *
+ * @since	1.0
+ */
+function kbs_Plugin_Name_install() {
+	if ( ! function_exists( 'is_plugin_active' ) )  {
+        include_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+    }
+
+    if ( ! is_plugin_active( 'kb-support/kb-support.php' ) )    {
+        echo __( 'KB Support must be installed and activated!', 'kbs-plugin-name' );
+        exit;
+    }
+
+	$current_version = get_option( 'kbs_{plugin_name}_version' );
+
+	if ( ! $current_version ) {
+		add_option( 'kbs_email_support_version', KBS_EMS_VERSION, '', 'yes' );
+
+		// Add any default options here
+		$options = array(
+			'option_name' => 'option_value'
+		);
+
+		foreach( $options as $key => $value )	{
+			kbs_update_option( $key, $value );
+		}
+	}
+} // kbs_Plugin_Name_install
+register_activation_hook( __FILE__, 'kbs_email_support_install' );
+
+/**
+ * Runs when the plugin is deactivated.
+ *
+ * @since	1.0
+ */
+function kbs_Plugin_Name_deactivate()	{
+	// Add code to execute when the plugin is deactivated
+} // kbs_Plugin_Name_deactivate
+register_deactivation_hook( __FILE__, 'kbs_Plugin_Name_deactivate' );
